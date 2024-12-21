@@ -65,8 +65,8 @@ async def create_order(request:Request,background_tasks:BackgroundTasks):#id,qua
     order = Order(
         product_id=product['pk'],
         price=product['price'],
-        fee=product['price'] * 0.20,
-        total= product['price']+product['price']*0.20,
+        fee=round(product['price'] * 0.20,2),
+        total= round(product['price']+product['price']*0.20,2),
         quantity=body['quantity'],
         status="pending"
     )
@@ -78,6 +78,8 @@ async def create_order(request:Request,background_tasks:BackgroundTasks):#id,qua
 
 
 def order_completed(order:Order):
-    time.sleep(10)
+    time.sleep(5)
     order.status = 'completed'
     order.save()
+    # producer
+    redis.xadd("order_completed",order.dict(),"*")
