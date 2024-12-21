@@ -4,15 +4,21 @@ from fastapi.background import BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 import requests,time
+from decouple import config
 
 
-
+ALLOW_ORIGINS = config("CORS_ALLOW_ORIGINS").split(",")
+# to communicate with the inventory
+SERVER_URL = config("SERVER_URL")
+PORT = config("PORT")
+print("server = ",SERVER_URL)
+print("PORT = ",PORT)
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost:3000'],
+    allow_origins=ALLOW_ORIGINS,
     allow_methods=['*'],
     allow_headers=['*']
 )
@@ -20,10 +26,10 @@ app.add_middleware(
 
 # the payment database
 redis = get_redis_connection(
-    host="redis-19806.c9.us-east-1-2.ec2.redns.redis-cloud.com",  # Redis server host
-    port=19806,         # Redis server port
-    password='LJojabkowutc2Eb3Dm4yye6bSjo1npTn',     # Redis password if required
-    decode_responses=True  # Decode responses into strings
+    host=config("REDIS_HOST"),
+    port=config("REDIS_PORT"),
+    password=config("REDIS_PASSWORD"),
+    decode_responses=True
 )
 
 class Order(HashModel):
@@ -37,19 +43,24 @@ class Order(HashModel):
     class Meta:
         database=redis
 
+
+# get order by the pk
 @app.get("/order/{pk}")
 async def get_order(pk:str):
     return Order.get(pk)
 
 
-
+# make an order
 @app.post("/orders")
 
 async def create_order(request:Request,background_tasks:BackgroundTasks):#id,quantity
    
     body = await request.json()
     
-    req = requests.get("http://127.0.0.1:8000/products/%s" % body['id'])
+    
+    url = f"{SERVER_URL}:{PORT}/products/%s" % body['id']
+
+    req = requests.get(url)
     product = req.json()
     order = Order(
         product_id=product['pk'],
@@ -62,11 +73,9 @@ async def create_order(request:Request,background_tasks:BackgroundTasks):#id,qua
     order.save()
     background_tasks.add_task(order_completed,order)
     
-    url = f"http://127.0.0.1:8000/products/{body['id']}"
-    payload = {"quantity": product['quantity']-body['quantity']}  # Create the body for the PUT request
-    response = requests.put(url, params=payload)
-    print(response)
     return order
+
+
 
 def order_completed(order:Order):
     time.sleep(10)
