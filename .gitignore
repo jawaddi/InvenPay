@@ -1,0 +1,10 @@
+# Python cache files
+payment/__pycache__/
+inventory/__pycache__/
+
+# Virtual Environment
+venv/
+
+# General Python files
+*.pyc
+*.pyo
