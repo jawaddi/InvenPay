@@ -8,8 +8,6 @@ from typing import List
 
 
 ALLOW_ORIGINS = config("CORS_ALLOW_ORIGINS").split(",")
-#SERVER_URL = config("SERVER_URL")
-#PORT = config("PORT")
 
 app = FastAPI()
 
